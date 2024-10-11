@@ -96,7 +96,7 @@ export default function AirportCosts() {
         <div className={styles.formGroup}>
           <div className={styles.inputContainer}>
             <label className={`${styles.label} ${horas ? styles.labelShrink : ''}`} htmlFor="horas">
-              Horas em Solo (INT):
+              Horas em Solo:
             </label>
             <input
               required
