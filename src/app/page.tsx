@@ -69,7 +69,7 @@ export default function AirportCosts() {
             fill
             objectFit="contain"
             alt="Product Image"
-            src="https://drive.google.com/uc?export=view&id=1Q8U7ac6WbhI_bNGmdK0D6DL12tzoTimz"
+            src="https://drive.google.com/uc?export=view&id=1F0jRQHtmlADUIsCUJEWS58EubPxaRvAN"
           />
         </div>
 
