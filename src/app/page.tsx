@@ -1,149 +1,85 @@
-"use client";
+const SHEET_ID = '1TgwUn5S6UGLWElE3yitFpF6o7mtveF_Z1pmrgHO8vfY';
+const API_KEY = 'SUA_API_KEY_AQUI';
+const SHEET_NAME = 'Histórico';
 
-import Image from 'next/image';
-import { useState } from 'react';
-import styles from './styles.module.css';
-
-type Aeroportos = {
-  [key: string]: [number, number, number];
+const patiosPorAeroporto = {
+  BSB: ['123', '124', '125'],
+  CNF: ['234', '235', '236'],
+  GIG: ['345', '356', '367'],
+  IGU: ['456', '467', '489']
 };
 
-const aeroportos: Aeroportos = {
-  BSB: [44.74, 9.42, 0],
-  CNF: [61.24, 12.98, 106.39],
-  GIG: [37.28, 7.85, 320.75],
-  IGU: [65.04, 13.66, 189.38],
-};
+function mostrarPatios() {
+  const aeroporto = document.getElementById("aeroportoSelect").value;
+  const patioContainer = document.getElementById("patioContainer");
+  const patioTableBody = document.getElementById("patioTable").getElementsByTagName('tbody')[0];
 
-type Resultado = {
-  custoManobraTotal: number;
-  custoEstacionamentoTotal: number;
-  saving: number;
-  resposta: string;
-};
+  patioTableBody.innerHTML = ""; // Limpa as posições anteriores
 
-const calcularCustos = (aeroporto: string, horas: number): Resultado => {
-  const [custoManobra, custoEstacionamento, custoReboque] = aeroportos[aeroporto];
+  if (aeroporto && patiosPorAeroporto[aeroporto]) {
+    patiosPorAeroporto[aeroporto].forEach(patio => {
+      const row = patioTableBody.insertRow();
+      const cell = row.insertCell();
+      cell.textContent = patio;
+    });
+    patioContainer.classList.add('containerExpandActive'); // Expande a tabela
+  } else {
+    patioContainer.classList.remove('containerExpandActive'); // Recolhe a tabela se nada for selecionado
+  }
+}
 
-  const custoManobraTotal = horas <= 3 ? 0 : custoManobra * horas;
-  const custoEstacionamentoTotal = custoEstacionamento * horas + custoReboque * 2;
-  const saving = custoManobraTotal - custoEstacionamentoTotal;
+function calcularCusto() {
+  const horas = document.getElementById("horasInput").value;
+  const resultadoMensagem = document.getElementById("resultadoMensagem");
+  const registroButton = document.getElementById("registroButton");
 
-  const resposta = saving <= 0 ? "PERMANECER EM POSIÇÃO DE MANOBRAS" : "MOVIMENTAR PARA POSIÇÃO DE ESTACIONAMENTO";
+  if (horas === "" || isNaN(horas)) {
+    resultadoMensagem.innerHTML = '<span class="red">Insira um valor válido para horas.</span>';
+    registroButton.style.display = "none";
+    return;
+  }
 
-  return { custoManobraTotal, custoEstacionamentoTotal, saving, resposta };
-};
+  const valor = parseInt(horas);
 
-export default function AirportCosts() {
-  const [erro, setErro] = useState<string>('');
-  const [horas, setHoras] = useState<string>('');
-  const [aeroporto, setAeroporto] = useState<string>('');
-  const [resultado, setResultado] = useState<Resultado | null>(null);
+  if (valor > 0) {
+    resultadoMensagem.innerHTML = '<span class="green">MOVIMENTAR PARA POSIÇÃO DE ESTACIONAMENTO</span>';
+    registroButton.style.display = "block";
+  } else {
+    resultadoMensagem.innerHTML = '<span class="red">PERMANECER EM POSIÇÃO DE MANOBRAS</span>';
+    registroButton.style.display = "none";
+  }
+}
 
-  const handleCalcular = () => {
-    try {
-      const horasInt = parseInt(horas);
-      if (isNaN(horasInt) || horasInt < 0) {
-        throw new Error('As horas devem ser um valor inteiro positivo.');
-      }
+function registrarAcao() {
+  const aeroporto = document.getElementById("aeroportoSelect").value;
+  const horas = document.getElementById("horasInput").value;
+  const resultado = horas > 0 ? 'MOVIMENTAR' : 'PERMANECER';
+  const dataAtual = new Date().toLocaleDateString();
 
-      if (!aeroporto) {
-        throw new Error('Selecione um aeroporto.');
-      }
+  const valores = [
+    [dataAtual, aeroporto, horas, resultado]
+  ];
 
-      const { custoManobraTotal, custoEstacionamentoTotal, saving, resposta } = calcularCustos(aeroporto, horasInt);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}!A1:append?valueInputOption=USER_ENTERED&key=${API_KEY}`;
 
-      setResultado({ custoManobraTotal, custoEstacionamentoTotal, saving, resposta });
-      setErro('');
-    } catch (e) {
-      setErro((e as Error).message);
-      setResultado(null);
+  fetch(url, {
+    method: 'POST',
+    body: JSON.stringify({
+      range: `${SHEET_NAME}!A1`,
+      values: valores,
+      majorDimension: 'ROWS'
+    }),
+    headers: {
+      'Content-Type': 'application/json'
     }
-  };
-
-  return (
-    <div className={styles.main}>
-      <div className={styles.container}>
-        <div className={styles.imageContainer}>
-          <Image
-            fill
-            objectFit="contain"
-            alt="Product Image"
-            src="https://drive.google.com/uc?export=view&id=1F0jRQHtmlADUIsCUJEWS58EubPxaRvAN"
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <div className={styles.inputContainer}>
-            <label className={`${styles.label} ${aeroporto ? styles.labelShrink : ''}`} htmlFor="aeroporto">
-              Selecione o Aeroporto:
-            </label>
-            <select
-              required
-              id="aeroporto"
-              value={aeroporto}
-              className={styles.input}
-              onChange={(e) => setAeroporto(e.target.value)}
-            >
-              <option value=""></option>
-              {Object.keys(aeroportos).map((aero) => (
-                <option key={aero} value={aero}>{aero}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
-          <div className={styles.inputContainer}>
-            <label className={`${styles.label} ${horas ? styles.labelShrink : ''}`} htmlFor="horas">
-              Horas em Solo:
-            </label>
-            <input
-              required
-              id="horas"
-              type="text"
-              value={horas}
-              className={styles.input}
-              placeholder={horas && "Ex: 5"}
-              onChange={(e) => setHoras(e.target.value.replace(/[^0-9]/g, ''))}
-            />
-          </div>
-        </div>
-
-        <button onClick={handleCalcular} className={styles.button}>Calcular</button>
-
-        {erro && <p className={styles.error}>{erro}</p>}
-
-        {resultado && (
-          <div className={`${styles.resultado} ${styles.fadeIn} ${styles.containerExpandActive}`}>
-            <table className={styles.resultTable}>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Valor (R$)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Custo de Manobra</td>
-                  <td>{resultado.custoManobraTotal.toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td>Custo de Estacionamento</td>
-                  <td>{resultado.custoEstacionamentoTotal.toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td>Economia</td>
-                  <td>{resultado.saving.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className={resultado.resposta.includes('PERMANECER') ? styles.red : styles.green}>
-              {resultado.resposta}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Dados registrados com sucesso:', data);
+    alert('Ação registrada com sucesso!');
+  })
+  .catch(error => {
+    console.error('Erro ao registrar ação:', error);
+    alert('Erro ao registrar a ação.');
+  });
 }
